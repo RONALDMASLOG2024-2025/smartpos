@@ -1,0 +1,17 @@
+transaction_id,product_id,product_name,quantity,unit_price,subtotal
+DEMO001,P005,White Bread,1,35.0,35.0
+DEMO001,P004,Coffee Sachet,1,12.0,12.0
+DEMO002,P005,White Bread,1,35.0,35.0
+DEMO002,P004,Coffee Sachet,1,12.0,12.0
+DEMO002,P011,Fresh Milk 1L,1,92.0,92.0
+DEMO003,P005,White Bread,1,35.0,35.0
+DEMO003,P001,Coca-Cola 330ml,1,25.0,25.0
+DEMO004,P005,White Bread,1,35.0,35.0
+DEMO004,P004,Coffee Sachet,2,12.0,24.0
+DEMO005,P004,Coffee Sachet,1,12.0,12.0
+DEMO005,P007,Chocolate Cookies,1,18.0,18.0
+DEMO006,P010,Cup Noodles,1,32.0,32.0
+DEMO006,P002,Mineral Water 500ml,1,15.0,15.0
+DEMO007,P005,White Bread,1,35.0,35.0
+DEMO007,P004,Coffee Sachet,1,12.0,12.0
+DEMO007,P012,Chocolate Milk,1,35.0,35.0

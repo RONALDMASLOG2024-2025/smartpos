@@ -1,0 +1,19 @@
+product_id,product_name,category,price,stock_quantity
+P001,Coca-Cola 330ml,Beverages,25.0,50
+P002,Mineral Water 500ml,Beverages,15.0,55
+P003,Iced Tea,Beverages,20.0,45
+P004,Coffee Sachet,Beverages,12.0,40
+P005,White Bread,Bakery,35.0,30
+P006,Pandesal Pack,Bakery,30.0,25
+P007,Chocolate Cookies,Snacks,18.0,35
+P008,Potato Chips,Snacks,22.0,30
+P009,Instant Noodles,Instant Food,16.0,40
+P010,Cup Noodles,Instant Food,32.0,20
+P011,Fresh Milk 1L,Dairy,92.0,18
+P012,Chocolate Milk,Dairy,35.0,20
+P013,Shampoo Sachet,Personal Care,8.0,80
+P014,Bath Soap,Personal Care,28.0,25
+P015,Toothpaste,Personal Care,55.0,15
+P016,Rice Crackers,Snacks,20.0,28
+P017,Cheese Bread,Bakery,28.0,24
+P018,Canned Sardines,Instant Food,27.0,32
