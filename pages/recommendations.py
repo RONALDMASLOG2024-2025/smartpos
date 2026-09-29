@@ -7,7 +7,7 @@ from utils.recommendation import association_rules_table, frequency_recommendati
 
 def render() -> None:
     st.title("Recommendations")
-    st.caption("Find products that are frequently purchased in the same transaction.")
+    st.caption("See which products customers often buy together.")
 
     include_demo = st.checkbox(
         "Include supplied demo baskets", value=True,

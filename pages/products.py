@@ -16,7 +16,7 @@ def _product_table(products):
 
 def render() -> None:
     st.title("Products")
-    st.caption("Add, edit, delete and restock products stored in data/products.csv.")
+    st.caption("Find, update, and restock what's on your shelves.")
     notice = st.session_state.pop("products_notice", None)
     if notice:
         st.success(notice)

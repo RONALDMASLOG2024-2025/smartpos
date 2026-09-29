@@ -16,7 +16,7 @@ def peso(value: float) -> str:
 
 def render() -> None:
     st.title("Dashboard")
-    st.caption("A live summary calculated from your CSV files.")
+    st.caption("Your shop at a glance. Updated as sales happen.")
 
     products = load_products()
     transactions = read_csv("transactions")
@@ -46,14 +46,14 @@ def render() -> None:
         else:
             items["subtotal"] = pd.to_numeric(items["subtotal"], errors="coerce").fillna(0)
             sales = items.groupby("product_name")["subtotal"].sum().sort_values(ascending=False)
-            st.bar_chart(sales)
+            st.bar_chart(sales, color="#176e58")
     with right:
         st.subheader("Units sold")
         if items.empty:
             st.info("Complete a sale to see quantities sold here.")
         else:
             quantities = items.groupby("product_name")["quantity"].sum().sort_values(ascending=False)
-            st.bar_chart(quantities)
+            st.bar_chart(quantities, color="#db7653")
 
     st.subheader("Recent transactions")
     if transactions.empty:

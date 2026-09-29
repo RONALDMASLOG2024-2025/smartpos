@@ -14,7 +14,7 @@ def _peso(value: float) -> str:
 
 def render() -> None:
     st.title("Transactions")
-    st.caption("Every completed sale is kept in CSV files and can be inspected here.")
+    st.caption("A clear record of every completed sale.")
     transactions = read_csv("transactions")
     items = read_csv("transaction_items")
     if transactions.empty:

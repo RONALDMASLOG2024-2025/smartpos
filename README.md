@@ -23,11 +23,19 @@ Using `python -m streamlit` ensures Streamlit runs from the same Python environm
 
 ## Pages
 
+- **Home** introduces SmartPOS and links directly to checkout and the walkthrough.
 - **Dashboard** calculates live sales, transaction, low-stock and product-sales summaries.
 - **POS** creates a cart, validates stock and payment, saves a sale, and reduces inventory.
 - **Products** supports searching, category filtering, adding, editing, restocking and deleting products.
 - **Transactions** searches and filters completed sales and displays their individual items.
 - **Recommendations** calculates frequently purchased product pairs and includes an optional Apriori analysis.
+- **How it works** walks through product setup, checkout, history and recommendations.
+
+## Vercel marketing site
+
+Vercel publishes the static marketing site in `public/`, including its How it works section. The root `vercel.json` selects the static output instead of treating the Streamlit `app.py` file as a Python ASGI/WSGI entry point. Deploy the repository root to Vercel with these files committed. No Python build or `app` export is needed for the marketing site.
+
+**The Vercel site does not run checkout or manage sales.** Start the Streamlit app locally with the command above, or deploy it separately on a server with a persistent writable disk for the CSV files. Vercel Functions do not provide durable local CSV storage for a point-of-sale app. The marketing site's "View setup guide" button currently points to this repository's installation instructions; once the Streamlit app has a suitable hosted URL, update that link in `public/index.html`.
 
 ## CSV files
 
@@ -64,6 +72,8 @@ The optional Apriori panel uses `mlxtend` to show association rules with support
 smartpos/
 ├── app.py
 ├── requirements.txt
+├── vercel.json           # Vercel serves only the static marketing site
+├── public/               # marketing page and shared hero photograph
 ├── data/                 # persistent CSV files
 ├── pages/                # one renderer per app page
 └── utils/                # file handling, products, transactions, recommendations

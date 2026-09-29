@@ -31,7 +31,7 @@ def _add_to_cart(product: dict, quantity: int = 1) -> tuple[bool, str]:
 
 def render() -> None:
     st.title("POS / Checkout")
-    st.caption("Select products, build a cart, then complete a CSV-backed sale.")
+    st.caption("Build the basket, take payment, and keep stock in sync.")
     notice = st.session_state.pop("pos_notice", None)
     if notice:
         st.success(notice)
