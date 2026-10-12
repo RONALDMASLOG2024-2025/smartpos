@@ -1,3 +1,6 @@
 transaction_id,product_id,product_name,quantity,unit_price,subtotal
 T0001,P012,Chocolate Milk,2,35.0,70.0
 T0002,P002,Mineral Water 500ml,5,15.0,75.0
+T0003,P007,Chocolate Cookies,3,18.0,54.0
+T0004,P007,Chocolate Cookies,3,18.0,54.0
+T0004,P004,Coffee Sachet,1,12.0,12.0

@@ -1,89 +1,95 @@
 # SmartPOS
 
-SmartPOS is a beginner-friendly Point-of-Sale application for a small business. It manages products, stock and completed sales with CSV files instead of a database. It also processes purchase baskets to recommend products frequently bought together.
+SmartPOS is a retail point-of-sale app with a Manager workspace and a focused Cashier checkout. The original codebase was audited before migration; the audit and permission matrix are in [docs/AUDIT.md](docs/AUDIT.md).
 
-## Technologies
+The application now uses React, TypeScript, Vite and Supabase. PostgreSQL holds store data; Supabase Google OAuth authenticates users; RLS and guarded database functions enforce membership and roles; private Supabase Storage holds product images.
 
-- Python 3
-- Streamlit for the interface
-- Pandas for reading, writing and processing CSV files
-- CSV files for persistent storage
-- mlxtend for the optional Apriori / association-rule extension
+## Run locally
 
-## Installation and running
+Requires Node.js 22.12 or newer. Python 3.10+ is optional for ML training and legacy migration.
 
-```bash
-pip install -r requirements.txt
-python -m streamlit run app.py
+```powershell
+npm install
+npm run dev
 ```
 
-Open the local address printed by Streamlit in a browser.
+Open http://127.0.0.1:5173. `run_app.bat` starts the same command from the project directory.
 
-Using `python -m streamlit` ensures Streamlit runs from the same Python environment where the requirements were installed. If PowerShell says that `streamlit` is not recognized, use this command or run `./run_app.bat`.
+Use `.env.example` to configure your new project. Follow [docs/SETUP.md](docs/SETUP.md) for the Supabase migrations, Google Console callback URLs, automatic Manager registration and Vercel deployment.
 
-## Pages
+For a separate local demo, set `VITE_ENABLE_DEMO=true` in `.env.local` with no Supabase credentials. Demo accounts/sales are fictional, explicitly labelled and stored only in this browser. Production defaults to demo disabled. A configured Supabase project disables demo login even when the flag is set.
 
-- **Home** introduces SmartPOS and links directly to checkout and the walkthrough.
-- **Dashboard** calculates live sales, transaction, low-stock and product-sales summaries.
-- **POS** creates a cart, validates stock and payment, saves a sale, and reduces inventory.
-- **Products** supports searching, category filtering, adding, editing, restocking and deleting products.
-- **Transactions** searches and filters completed sales and displays their individual items.
-- **Recommendations** calculates frequently purchased product pairs and includes an optional Apriori analysis.
-- **How it works** walks through product setup, checkout, history and recommendations.
+## Workspaces
 
-## Vercel marketing site
+- **Manager:** daily/monthly sales, trends, stock attention, checkout, product/category management, private image upload/replacement, stock adjustments/history, all store receipts, reports, product performance, Cashier Google-account approvals, CSV import/export, demand forecasts, store settings.
+- **Cashier:** own daily sales, POS search/category filters, stock-aware basket, quantities, cash payment/change, externally verified card/e-wallet payments, receipts, own transactions and profile.
 
-Vercel publishes the static marketing site in `public/`, including its How it works section. The root `vercel.json` selects the static output instead of treating the Streamlit `app.py` file as a Python ASGI/WSGI entry point. Deploy the repository root to Vercel with these files committed. No Python build or `app` export is needed for the marketing site.
+Choose Manager or Cashier before continuing with Google. A first-time Manager automatically creates their own empty store; returning users keep their existing workspace and role. Cashiers must first be added by their Manager using their exact Google email. Choosing Manager does not promote an existing Cashier or grant access to another store. Cashiers cannot see product costs or another Cashier's transactions. Server/database enforcement is independent of route visibility.
 
-**The Vercel site does not run checkout or manage sales.** Start the Streamlit app locally with the command above, or deploy it separately on a server with a persistent writable disk for the CSV files. Vercel Functions do not provide durable local CSV storage for a point-of-sale app. The marketing site's "View setup guide" button currently points to this repository's installation instructions; once the Streamlit app has a suitable hosted URL, update that link in `public/index.html`.
+Checkout uses integer cents, current server prices, ordered product locks, a single PostgreSQL transaction and an idempotency UUID. Insufficient stock, stale prices, payment errors or later write failures roll back the complete operation. Receipts retain original product names/SKUs/prices, Cashier and store details. Product archiving keeps history intact. Inventory adjustments/imports reject stale stock balances rather than overwriting a concurrent sale.
 
-## CSV files
+Cash, card and e-wallet are recorded payment methods. SmartPOS does not charge a card or wallet; confirm external payment at your terminal/provider before recording it.
 
-| File                                | Columns                                                                                          | Purpose                                                                  |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `data/products.csv`               | `product_id`, `product_name`, `category`, `price`, `stock_quantity`                    | Inventory catalogue                                                      |
-| `data/transactions.csv`           | `transaction_id`, `datetime`, `total`, `payment`, `change`                             | One row per completed sale                                               |
-| `data/transaction_items.csv`      | `transaction_id`, `product_id`, `product_name`, `quantity`, `unit_price`, `subtotal` | Products inside each completed sale                                      |
-| `data/recommendations.csv`        | product/recommendation IDs and names, pair count                                                 | Saved calculated recommendation results                                  |
-| `data/demo_transaction_items.csv` | same columns as transaction items                                                                | Separate demo baskets used only when enabled on the Recommendations page |
+## CSV and legacy data
 
-The demo baskets do not affect dashboard totals, real transactions, or inventory. They let the recommendation feature be demonstrated before actual checkout history exists.
+Import & export provides a template matching the schema, file parsing, all-row validation, error messages, create/update preview, explicit approval and atomic application. Successful imports are audited. Products, stock, stock history, transactions, item lines, reports and forecasts can be exported. Spreadsheet formula injection is neutralized in exported text.
 
-## File handling demonstration
+Your existing `data/*.csv` files were preserved. They are no longer the active backend and are never automatically imported into live stores. [scripts/migrate_legacy.py](scripts/migrate_legacy.py) validates the three original product/sales/item files and generates reviewable SQL for an empty workspace. It preserves stock balances and receipt history, identifies unknown legacy Cashiers and refuses inconsistent data. See the setup guide before using it. On Windows, install `tzdata` (`python -m pip install tzdata`) if Python reports that Asia/Manila timezone data is missing.
 
-The app keeps file operations easy to locate:
+## Forecasting
 
-- **READ:** `utils/file_handler.py` loads every CSV safely, including missing or empty files.
-- **WRITE:** product changes and saved recommendations replace their corresponding full CSV safely.
-- **APPEND:** checkout adds a new transaction and its item rows without removing prior sales.
-- **UPDATE:** editing a product, restocking, and a completed checkout update `products.csv`.
-- **DELETE:** deleting a product removes its row while retaining its historical sales records.
-- **PROCESS:** the dashboard totals, charts, low-stock list and recommendations are calculated from CSV data.
+```powershell
+npm run ml:train
+```
 
-## Recommendation method
+The Python training pipeline generates 1,344 deterministic synthetic daily observations (seed 42), trains weekday/trend ridge regression, evaluates a 14-day holdout, then writes `ml/artifacts/demand-v1.json` and the browser artifact `src/ml/model.json`. Synthetic observations live only in `ml/data/synthetic_daily.csv`; they never enter POS transactions or inventory.
 
-The standard recommendation feature groups `transaction_items.csv` rows by transaction ID, forms every product pair in a basket, and counts its occurrences. For example, if White Bread and Coffee Sachet appear in four transactions, the app can recommend Coffee Sachet when White Bread is in a later cart.
+The Manager can explicitly run labelled synthetic forecasts. Real inference trains from complete historical daily product quantities, including zero-sale days, excluding the incomplete current day. Products need at least 56 completed days of history; insufficient data is clearly reported. Forecast runs record provenance/model version/results in Supabase. Predictions estimate seven-day demand and buffer-based replenishment; they never change inventory automatically.
 
-The optional Apriori panel uses `mlxtend` to show association rules with support, confidence and lift. The POS remains fully functional if there is not enough history or if this optional package is unavailable.
+To train an offline real dataset, supply a CSV with `SKU,Date,Quantity`, continuous dates and zero-sale observations:
 
-## Project structure
+```powershell
+python ml/train.py --source real --input daily.csv --output ml/artifacts/real-demand.json
+```
+
+## Verification
+
+```powershell
+npm test
+npm run lint
+npm run build
+npx playwright install chromium
+npm run uat
+```
+
+UAT expects the development server running with isolated demo enabled. Tests use fresh browser contexts and fictional accounts. [docs/UAT.md](docs/UAT.md) records outcomes, fixes/retests and screenshot evidence. PostgreSQL tests execute the actual SQL in PGlite with mocked Supabase auth/storage schemas; they are not a substitute for testing the hosted provider and Storage services after connection.
+
+Run `npx playwright test --config playwright.auth.config.ts` to test the role chooser, OAuth role persistence, Manager/Cashier callback handling, session restoration and unapproved Cashier errors. This suite starts its own local server with a fake Supabase host and intercepts all authentication and database requests.
+
+A production safety check uses a build with `VITE_ENABLE_DEMO=false` and no credentials:
+
+```powershell
+$env:VITE_ENABLE_DEMO='false'
+npm run build
+Remove-Item Env:\VITE_ENABLE_DEMO
+npx playwright test --config playwright.production.config.ts
+```
+
+## Structure
 
 ```text
-smartpos/
-├── app.py
-├── requirements.txt
-├── vercel.json           # Vercel serves only the static marketing site
-├── public/               # marketing page and shared hero photograph
-├── data/                 # persistent CSV files
-├── pages/                # one renderer per app page
-└── utils/                # file handling, products, transactions, recommendations
+src/components/       shared UI, navigation and receipts
+src/pages/            focused application routes
+src/context.tsx       session, workspace loading and action state
+src/data/             Supabase repository and isolated demo repository
+src/domain/           shared types, permissions, validation and reporting
+src/lib/              OAuth client, CSV/file handling
+src/ml/               demand inference and trained model artifact
+supabase/migrations/  PostgreSQL schema, RLS, Storage and atomic RPCs
+ml/                   separate synthetic data, training and artifacts
+scripts/              validated legacy migration
+ tests/               business, PostgreSQL, UAT and production safety tests
+docs/                 audit, setup, UAT and screenshots
 ```
 
-## POS transaction flow
-
-1. The cashier adds in-stock products to a temporary Streamlit cart.
-2. Checkout checks cart quantities against the latest inventory and confirms payment is enough.
-3. The app generates the next transaction ID and appends records to both transaction CSV files.
-4. It updates `products.csv` with reduced stock and clears the cart.
-
-All data remains available after restarting the application because it is saved in the `data` folder.
+Vercel now builds and serves the complete Vite app with SPA route fallback, rather than a separate static-only marketing page. Google provider credentials, actual cloud data and hosted acceptance checks await the new Supabase project connection.

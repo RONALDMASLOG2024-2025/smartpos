@@ -1,2 +1,3 @@
 @echo off
-python -m streamlit run app.py
+cd /d "%~dp0"
+npm run dev
