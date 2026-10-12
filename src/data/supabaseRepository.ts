@@ -5,6 +5,9 @@ import type {
   CheckoutInput,
   ForecastResult,
   ImportRow,
+  HistoryRow,
+  HistoryLine,
+  HistoryImportResult,
   Product,
   ProductInput,
   Repository,
@@ -34,22 +37,33 @@ export class SupabaseRepository implements Repository {
   async load(): Promise<Snapshot> {
     const c = this.client;
     const manager = this.account.role === "manager";
-    const [store, products, categories, sales, accounts, movements, imports] =
-      await Promise.all([
-        c.from("stores").select("*").eq("id", this.account.store_id).single(),
-        manager
-          ? this.allRows<Product>("products")
-          : this.allRows<Product>("catalogue", true),
-        this.allRows<Category>("categories"),
-        this.allRows("transactions"),
-        this.allRows<Account>("accounts"),
-        manager
-          ? this.allRows("stock_movements")
-          : Promise.resolve({ data: [], error: null }),
-        manager
-          ? this.allRows<Snapshot["imports"][number]>("import_runs")
-          : Promise.resolve({ data: [], error: null }),
-      ]);
+    const [
+      store,
+      products,
+      categories,
+      sales,
+      accounts,
+      movements,
+      imports,
+      history,
+    ] = await Promise.all([
+      c.from("stores").select("*").eq("id", this.account.store_id).single(),
+      manager
+        ? this.allRows<Product>("products")
+        : this.allRows<Product>("catalogue", true),
+      this.allRows<Category>("categories"),
+      this.allRows("transactions"),
+      this.allRows<Account>("accounts"),
+      manager
+        ? this.allRows("stock_movements")
+        : Promise.resolve({ data: [], error: null }),
+      manager
+        ? this.allRows<Snapshot["imports"][number]>("import_runs")
+        : Promise.resolve({ data: [], error: null }),
+      manager
+        ? this.allRows<HistoryLine>("sales_history")
+        : Promise.resolve({ data: [], error: null }),
+    ]);
     const itemResult = await this.allRows("transaction_items");
     const items = unwrap(itemResult) as unknown as SaleItem[];
     const catalogue = unwrap(products) as Product[];
@@ -81,6 +95,7 @@ export class SupabaseRepository implements Repository {
       accounts: unwrap(accounts),
       movements: unwrap(movements) as unknown as Snapshot["movements"],
       imports: unwrap(imports),
+      history: unwrap(history),
     };
   }
   private async allRows<T = Record<string, unknown>>(
@@ -181,6 +196,22 @@ export class SupabaseRepository implements Repository {
       .upload(path, file, { contentType: file.type, upsert: false });
     if (error) throw new Error(error.message);
     return path;
+  }
+  async importHistory(
+    rows: HistoryRow[],
+    filename: string,
+  ): Promise<HistoryImportResult> {
+    this.manager();
+    return unwrap(
+      await this.client.rpc("import_sales_history", {
+        p_rows: rows,
+        p_filename: filename,
+      }),
+    );
+  }
+  async removeSyntheticHistory(): Promise<number> {
+    this.manager();
+    return unwrap(await this.client.rpc("remove_synthetic_history"));
   }
   async removeImage(path: string) {
     this.manager();

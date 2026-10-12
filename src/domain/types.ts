@@ -112,6 +112,26 @@ export interface ImportRun {
   created_at: string;
   result: string;
 }
+export interface HistoryRow {
+  receipt: string;
+  sold_at: string;
+  sku: string;
+  quantity: number;
+  unit_price_cents: number;
+  source: "real" | "synthetic";
+}
+export interface HistoryLine extends HistoryRow {
+  id: string;
+  store_id: string;
+  product_id: string;
+  product_name: string;
+  line_total_cents: number;
+}
+export interface HistoryImportResult {
+  added: number;
+  skipped: number;
+  receipts: number;
+}
 export interface Forecast {
   product_id: string;
   name: string;
@@ -135,6 +155,7 @@ export interface Snapshot {
   accounts: Account[];
   movements: Movement[];
   imports: ImportRun[];
+  history: HistoryLine[];
 }
 export interface Repository {
   mode: "demo" | "supabase";
@@ -151,6 +172,11 @@ export interface Repository {
   manageCashier(email: string, name: string, active: boolean): Promise<void>;
   checkout(input: CheckoutInput): Promise<string>;
   importProducts(rows: ImportRow[], filename: string): Promise<number>;
+  importHistory(
+    rows: HistoryRow[],
+    filename: string,
+  ): Promise<HistoryImportResult>;
+  removeSyntheticHistory(): Promise<number>;
   uploadImage(file: File): Promise<string>;
   removeImage(path: string): Promise<void>;
   saveSettings(name: string, note: string): Promise<void>;

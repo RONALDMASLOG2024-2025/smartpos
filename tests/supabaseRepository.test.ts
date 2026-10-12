@@ -79,6 +79,7 @@ describe("Supabase HTTP integration contract (mocked service)", () => {
         expect(state.products[0]).not.toHaveProperty("cost_cents");
         expect(paths).not.toContain("/rest/v1/products");
         expect(paths).not.toContain("/rest/v1/stock_movements");
+        expect(paths).not.toContain("/rest/v1/sales_history");
       } else expect(state.products[0].cost_cents).toBeDefined();
     }
   });

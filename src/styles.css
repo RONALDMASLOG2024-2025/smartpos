@@ -866,6 +866,11 @@ dialog::backdrop {
   display: grid;
   gap: 12px;
 }
+.history-preview {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
 .sign-in-role {
   width: 100%;
   padding: 18px;

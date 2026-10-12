@@ -6,7 +6,9 @@ import type { ForecastResult } from "../domain/types";
 import { download, exportCSV } from "../lib/csv";
 export function Forecasting() {
   const { repo, data, busy, act } = useWorkspace();
-  const [synthetic, setSynthetic] = useState(repo.mode === "demo");
+  const [training, setTraining] = useState<
+    "real" | "uploaded-synthetic" | "built-in"
+  >(repo.mode === "demo" ? "built-in" : "real");
   const [result, setResult] = useState<ForecastResult | null>(null);
   return (
     <>
@@ -19,32 +21,56 @@ export function Forecasting() {
         <p className="muted">
           Weekday and trend regression learns from complete daily observations,
           including zero-sales days. The last 14 days are held out to measure
-          forecast error before refitting. Real models need at least 56
-          completed days of sales history per product.
+          forecast error before refitting. Models need at least 56 completed
+          days of sales history per product.
         </p>
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={synthetic}
-            disabled={repo.mode === "demo"}
+        <label>
+          Training data
+          <select
+            value={training}
             onChange={(e) => {
-              setSynthetic(e.target.checked);
+              setTraining(e.target.value as typeof training);
               setResult(null);
             }}
-          />
-          Use separate synthetic training data for development
+          >
+            <option value="real">
+              Actual checkout sales + uploaded real history
+            </option>
+            <option value="uploaded-synthetic">
+              Uploaded synthetic history (testing)
+            </option>
+            <option value="built-in">Built-in sample model</option>
+          </select>
         </label>
-        {synthetic && (
+        <p className="small muted">
+          {data.history.filter((row) => row.source === "real").length} uploaded
+          real item rows ·{" "}
+          {data.history.filter((row) => row.source === "synthetic").length}{" "}
+          uploaded synthetic item rows. Import past sales in Import &amp;
+          export. Historical dates can predate when products were added to
+          SmartPOS.
+        </p>
+        {training !== "real" && (
           <div className="alert warning">
-            Synthetic forecast · Demonstration only. These estimates are not
-            reliable business recommendations and do not use your real sales.
+            Synthetic forecast · Testing only. These estimates use sample data
+            and do not establish actual demand in your store.
           </div>
         )}
         <button
           className="primary"
           disabled={busy}
           onClick={async () => {
-            const prediction = forecast(data.products, data.sales, synthetic);
+            const prediction = forecast(
+              data.products,
+              data.sales,
+              training === "built-in"
+                ? true
+                : training === "uploaded-synthetic"
+                  ? "uploaded-synthetic"
+                  : false,
+              new Date(),
+              data.history,
+            );
             if (
               await act(
                 () => repo.saveForecast(prediction),
@@ -60,10 +86,11 @@ export function Forecasting() {
       {result &&
         (result.source === "insufficient" ? (
           <section className="panel">
-            <Empty title="More real history is needed">
+            <Empty title="More sales history is needed">
               {result.training_days} completed days available. Collect at least
-              56 days or explicitly enable synthetic training to explore the
-              pipeline.
+              56 days for a product in the selected source. Upload the 90-day
+              sample and select Uploaded synthetic history to test your
+              sari-sari catalog.
             </Empty>
           </section>
         ) : (
@@ -114,9 +141,10 @@ export function Forecasting() {
               </div>
               <p className="panel-description">
                 Restock = predicted demand + low-stock buffer − current stock.
-                Synthetic models cover only sample SKUs; real results cover
-                products with enough history. Forecasts are estimates and never
-                change stock automatically.
+                The built-in model covers only sample SKUs. Uploaded-history
+                results cover products with enough history in the selected
+                source. Forecasts are estimates and never change stock
+                automatically.
               </p>
               {result.results.length ? (
                 <Table

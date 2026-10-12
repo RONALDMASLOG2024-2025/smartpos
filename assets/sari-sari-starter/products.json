@@ -1,0 +1,402 @@
+[
+  {
+    "sku": "SSS-001",
+    "name": "Regular White Rice - 1 kg",
+    "category": "Rice & Pantry",
+    "price_cents": 5500,
+    "cost_cents": 4700,
+    "stock": 50,
+    "low_stock_threshold": 10,
+    "image_file": "rice.jpg"
+  },
+  {
+    "sku": "SSS-002",
+    "name": "Premium White Rice - 1 kg",
+    "category": "Rice & Pantry",
+    "price_cents": 6500,
+    "cost_cents": 5600,
+    "stock": 35,
+    "low_stock_threshold": 8,
+    "image_file": "rice.jpg"
+  },
+  {
+    "sku": "SSS-003",
+    "name": "White Sugar - 250 g",
+    "category": "Rice & Pantry",
+    "price_cents": 2500,
+    "cost_cents": 1900,
+    "stock": 40,
+    "low_stock_threshold": 10,
+    "image_file": "sugar.jpg"
+  },
+  {
+    "sku": "SSS-004",
+    "name": "White Sugar - 1 kg",
+    "category": "Rice & Pantry",
+    "price_cents": 9000,
+    "cost_cents": 7500,
+    "stock": 20,
+    "low_stock_threshold": 5,
+    "image_file": "sugar.jpg"
+  },
+  {
+    "sku": "SSS-005",
+    "name": "Iodized Salt - 250 g",
+    "category": "Rice & Pantry",
+    "price_cents": 1200,
+    "cost_cents": 800,
+    "stock": 30,
+    "low_stock_threshold": 8,
+    "image_file": "salt.jpg"
+  },
+  {
+    "sku": "SSS-006",
+    "name": "Chicken Egg - 1 piece",
+    "category": "Eggs & Bread",
+    "price_cents": 900,
+    "cost_cents": 700,
+    "stock": 90,
+    "low_stock_threshold": 20,
+    "image_file": "eggs.jpg"
+  },
+  {
+    "sku": "SSS-007",
+    "name": "Cooking Oil - 250 mL",
+    "category": "Condiments",
+    "price_cents": 3500,
+    "cost_cents": 2700,
+    "stock": 30,
+    "low_stock_threshold": 8,
+    "image_file": "oil.jpg"
+  },
+  {
+    "sku": "SSS-008",
+    "name": "Cooking Oil - 1 L",
+    "category": "Condiments",
+    "price_cents": 12500,
+    "cost_cents": 10500,
+    "stock": 15,
+    "low_stock_threshold": 4,
+    "image_file": "oil.jpg"
+  },
+  {
+    "sku": "SSS-009",
+    "name": "Instant Noodles Chicken - 55 g",
+    "category": "Noodles & Canned Goods",
+    "price_cents": 1200,
+    "cost_cents": 900,
+    "stock": 60,
+    "low_stock_threshold": 15,
+    "image_file": "noodles.jpg"
+  },
+  {
+    "sku": "SSS-010",
+    "name": "Instant Noodles Beef - 55 g",
+    "category": "Noodles & Canned Goods",
+    "price_cents": 1200,
+    "cost_cents": 900,
+    "stock": 48,
+    "low_stock_threshold": 12,
+    "image_file": "noodles.jpg"
+  },
+  {
+    "sku": "SSS-011",
+    "name": "Instant Pancit Canton Chili - 60 g",
+    "category": "Noodles & Canned Goods",
+    "price_cents": 1600,
+    "cost_cents": 1200,
+    "stock": 48,
+    "low_stock_threshold": 12,
+    "image_file": "noodles.jpg"
+  },
+  {
+    "sku": "SSS-012",
+    "name": "Sardines in Tomato Sauce - 155 g",
+    "category": "Noodles & Canned Goods",
+    "price_cents": 2500,
+    "cost_cents": 2000,
+    "stock": 36,
+    "low_stock_threshold": 10,
+    "image_file": "sardines.jpg"
+  },
+  {
+    "sku": "SSS-013",
+    "name": "Spicy Sardines - 155 g",
+    "category": "Noodles & Canned Goods",
+    "price_cents": 2700,
+    "cost_cents": 2200,
+    "stock": 24,
+    "low_stock_threshold": 6,
+    "image_file": "sardines.jpg"
+  },
+  {
+    "sku": "SSS-014",
+    "name": "Instant Coffee - 2 g sachet",
+    "category": "Coffee & Milk",
+    "price_cents": 500,
+    "cost_cents": 300,
+    "stock": 100,
+    "low_stock_threshold": 25,
+    "image_file": "coffee.jpg"
+  },
+  {
+    "sku": "SSS-015",
+    "name": "3-in-1 Coffee - 20 g sachet",
+    "category": "Coffee & Milk",
+    "price_cents": 1000,
+    "cost_cents": 700,
+    "stock": 100,
+    "low_stock_threshold": 25,
+    "image_file": "coffee.jpg"
+  },
+  {
+    "sku": "SSS-016",
+    "name": "Powdered Milk Drink - 33 g sachet",
+    "category": "Coffee & Milk",
+    "price_cents": 1500,
+    "cost_cents": 1100,
+    "stock": 60,
+    "low_stock_threshold": 15,
+    "image_file": "milk.jpg"
+  },
+  {
+    "sku": "SSS-017",
+    "name": "Evaporated Milk - 150 mL",
+    "category": "Coffee & Milk",
+    "price_cents": 3000,
+    "cost_cents": 2400,
+    "stock": 24,
+    "low_stock_threshold": 6,
+    "image_file": "milk.jpg"
+  },
+  {
+    "sku": "SSS-018",
+    "name": "Drinking Water - 500 mL",
+    "category": "Beverages",
+    "price_cents": 1500,
+    "cost_cents": 1000,
+    "stock": 48,
+    "low_stock_threshold": 12,
+    "image_file": "water.jpg"
+  },
+  {
+    "sku": "SSS-019",
+    "name": "Drinking Water - 1 L",
+    "category": "Beverages",
+    "price_cents": 2500,
+    "cost_cents": 1800,
+    "stock": 24,
+    "low_stock_threshold": 6,
+    "image_file": "water.jpg"
+  },
+  {
+    "sku": "SSS-020",
+    "name": "Cola Soft Drink - 250 mL",
+    "category": "Beverages",
+    "price_cents": 2000,
+    "cost_cents": 1400,
+    "stock": 36,
+    "low_stock_threshold": 10,
+    "image_file": "cola.jpg"
+  },
+  {
+    "sku": "SSS-021",
+    "name": "Cola Soft Drink - 1.5 L",
+    "category": "Beverages",
+    "price_cents": 7500,
+    "cost_cents": 6200,
+    "stock": 12,
+    "low_stock_threshold": 4,
+    "image_file": "cola.jpg"
+  },
+  {
+    "sku": "SSS-022",
+    "name": "Plain Crackers - 25 g pack",
+    "category": "Snacks & Candy",
+    "price_cents": 800,
+    "cost_cents": 500,
+    "stock": 60,
+    "low_stock_threshold": 15,
+    "image_file": "biscuits.jpg"
+  },
+  {
+    "sku": "SSS-023",
+    "name": "Plain Crackers - 90 g pack",
+    "category": "Snacks & Candy",
+    "price_cents": 2500,
+    "cost_cents": 1900,
+    "stock": 24,
+    "low_stock_threshold": 6,
+    "image_file": "biscuits.jpg"
+  },
+  {
+    "sku": "SSS-024",
+    "name": "Butter Biscuits - 30 g pack",
+    "category": "Snacks & Candy",
+    "price_cents": 1000,
+    "cost_cents": 700,
+    "stock": 48,
+    "low_stock_threshold": 12,
+    "image_file": "biscuits.jpg"
+  },
+  {
+    "sku": "SSS-025",
+    "name": "Potato Chips Original - 25 g",
+    "category": "Snacks & Candy",
+    "price_cents": 1500,
+    "cost_cents": 1000,
+    "stock": 40,
+    "low_stock_threshold": 10,
+    "image_file": "chips.jpg"
+  },
+  {
+    "sku": "SSS-026",
+    "name": "Potato Chips Cheese - 25 g",
+    "category": "Snacks & Candy",
+    "price_cents": 1500,
+    "cost_cents": 1000,
+    "stock": 40,
+    "low_stock_threshold": 10,
+    "image_file": "chips.jpg"
+  },
+  {
+    "sku": "SSS-027",
+    "name": "Fruit Candy - 1 piece",
+    "category": "Snacks & Candy",
+    "price_cents": 200,
+    "cost_cents": 100,
+    "stock": 200,
+    "low_stock_threshold": 50,
+    "image_file": "candy.jpg"
+  },
+  {
+    "sku": "SSS-028",
+    "name": "Fruit Candy - 20 piece pack",
+    "category": "Snacks & Candy",
+    "price_cents": 3000,
+    "cost_cents": 2000,
+    "stock": 20,
+    "low_stock_threshold": 5,
+    "image_file": "candy.jpg"
+  },
+  {
+    "sku": "SSS-029",
+    "name": "Bath Soap - 90 g bar",
+    "category": "Personal Care",
+    "price_cents": 2500,
+    "cost_cents": 1900,
+    "stock": 30,
+    "low_stock_threshold": 8,
+    "image_file": "soap.jpg"
+  },
+  {
+    "sku": "SSS-030",
+    "name": "Shampoo - 12 mL sachet",
+    "category": "Personal Care",
+    "price_cents": 800,
+    "cost_cents": 500,
+    "stock": 100,
+    "low_stock_threshold": 25,
+    "image_file": "shampoo.jpg"
+  },
+  {
+    "sku": "SSS-031",
+    "name": "Shampoo - 180 mL bottle",
+    "category": "Personal Care",
+    "price_cents": 9500,
+    "cost_cents": 7500,
+    "stock": 12,
+    "low_stock_threshold": 4,
+    "image_file": "shampoo.jpg"
+  },
+  {
+    "sku": "SSS-032",
+    "name": "Liquid Laundry Detergent - 250 mL",
+    "category": "Household Cleaning",
+    "price_cents": 3500,
+    "cost_cents": 2600,
+    "stock": 24,
+    "low_stock_threshold": 6,
+    "image_file": "detergent.jpg"
+  },
+  {
+    "sku": "SSS-033",
+    "name": "Liquid Laundry Detergent - 500 mL",
+    "category": "Household Cleaning",
+    "price_cents": 6500,
+    "cost_cents": 5000,
+    "stock": 18,
+    "low_stock_threshold": 5,
+    "image_file": "detergent.jpg"
+  },
+  {
+    "sku": "SSS-034",
+    "name": "Dishwashing Liquid - 250 mL",
+    "category": "Household Cleaning",
+    "price_cents": 3500,
+    "cost_cents": 2500,
+    "stock": 24,
+    "low_stock_threshold": 6,
+    "image_file": "dishwashing.jpg"
+  },
+  {
+    "sku": "SSS-035",
+    "name": "Toothpaste - 24 g tube",
+    "category": "Personal Care",
+    "price_cents": 2500,
+    "cost_cents": 1800,
+    "stock": 30,
+    "low_stock_threshold": 8,
+    "image_file": "toothpaste.jpg"
+  },
+  {
+    "sku": "SSS-036",
+    "name": "Toothpaste - 100 g tube",
+    "category": "Personal Care",
+    "price_cents": 6500,
+    "cost_cents": 5000,
+    "stock": 18,
+    "low_stock_threshold": 5,
+    "image_file": "toothpaste.jpg"
+  },
+  {
+    "sku": "SSS-037",
+    "name": "Soy Sauce - 200 mL",
+    "category": "Condiments",
+    "price_cents": 2000,
+    "cost_cents": 1400,
+    "stock": 24,
+    "low_stock_threshold": 6,
+    "image_file": "soy-sauce.jpg"
+  },
+  {
+    "sku": "SSS-038",
+    "name": "Soy Sauce - 500 mL",
+    "category": "Condiments",
+    "price_cents": 4000,
+    "cost_cents": 3000,
+    "stock": 18,
+    "low_stock_threshold": 5,
+    "image_file": "soy-sauce.jpg"
+  },
+  {
+    "sku": "SSS-039",
+    "name": "Sliced Bread - 400 g loaf",
+    "category": "Eggs & Bread",
+    "price_cents": 5500,
+    "cost_cents": 4300,
+    "stock": 15,
+    "low_stock_threshold": 5,
+    "image_file": "bread.jpg"
+  },
+  {
+    "sku": "SSS-040",
+    "name": "Bath Soap - 135 g bar",
+    "category": "Personal Care",
+    "price_cents": 3800,
+    "cost_cents": 2800,
+    "stock": 24,
+    "low_stock_threshold": 6,
+    "image_file": "soap.jpg"
+  }
+]

@@ -20,6 +20,7 @@ The Google Cloud project and Supabase project may be owned by different Google a
 
 7. Run `npm install` and `npm run dev`. Click **Sign in with Google**, choose **Manager**, and sign in. A first-time Manager gets a new empty workspace named **My store**, which can be renamed in **Settings**. Use **Cashiers → Add cashier** to authorize each Cashier's exact Google email. Cashiers choose **Cashier** at sign-in to join your workspace; an unapproved Cashier cannot join. Returning users choose their existing role. Disable Cashier access from the Cashiers page when necessary; every database RPC checks current active membership.
 8. For Vercel, set the same public environment variables in project settings, leave demo disabled, and deploy the repository with its Vite configuration. Add the exact deployed callback URL to Supabase. All app routes are served by the SPA rewrite.
+9. For historical-sales CSV imports and forecasting, run [003_transaction_history.sql](../supabase/migrations/003_transaction_history.sql) once in SQL Editor before deploying this feature. See [Transaction history](TRANSACTION_HISTORY.md) for the CSV format and production sample.
 
 ## Local demo
 

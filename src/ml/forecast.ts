@@ -1,5 +1,10 @@
 import model from "./model.json";
-import type { ForecastResult, Product, Sale } from "../domain/types";
+import type {
+  ForecastResult,
+  HistoryLine,
+  Product,
+  Sale,
+} from "../domain/types";
 import { dayKey } from "../domain/rules";
 const features = (day: number, weekday: number) => [
   1,
@@ -41,34 +46,35 @@ const weekday = (d: Date) => (d.getUTCDay() + 6) % 7;
 export function forecast(
   products: Product[],
   sales: Sale[],
-  synthetic: boolean,
+  synthetic: boolean | "uploaded-synthetic",
   now = new Date(),
+  history: HistoryLine[] = [],
 ): ForecastResult {
   const today = new Date(`${dayKey(now)}T00:00:00Z`);
-  const ordered = [...sales].sort((a, b) =>
+  const builtIn = synthetic === true;
+  const uploadedSynthetic = synthetic === "uploaded-synthetic";
+  const selectedHistory = history.filter(
+    (row) =>
+      row.source === (uploadedSynthetic ? "synthetic" : "real") &&
+      dayKey(row.sold_at) < dayKey(now),
+  );
+  const selectedSales = uploadedSynthetic
+    ? []
+    : sales.filter((sale) => dayKey(sale.created_at) < dayKey(now));
+  const ordered = [...selectedSales].sort((a, b) =>
     a.created_at.localeCompare(b.created_at),
   );
   const first = ordered.length
     ? new Date(`${dayKey(ordered[0].created_at)}T00:00:00Z`)
     : today;
-  const days = Math.floor((today.getTime() - first.getTime()) / 86400000); // excludes incomplete current day
-  const source = synthetic ? "synthetic" : days >= 56 ? "real" : "insufficient";
-  if (source === "insufficient")
-    return {
-      source,
-      model_version: model.version,
-      training_days: days,
-      horizon_days: 7,
-      validation_mae: null,
-      results: [],
-    };
   const errors: number[] = [];
+  const spans: number[] = [];
   const results = products
     .filter((p) => p.status === "active")
     .flatMap((p) => {
       let weights: number[];
       let trainingDays: number;
-      if (synthetic) {
+      if (builtIn) {
         const trained = model.models[p.sku as keyof typeof model.models];
         if (!trained) return [];
         weights = trained.coefficients;
@@ -76,13 +82,21 @@ export function forecast(
         errors.push(trained.validation_mae);
       } else {
         const productStart = new Date(`${dayKey(p.created_at)}T00:00:00Z`);
-        const start = productStart > first ? productStart : first;
+        let start = productStart > first ? productStart : first;
+        const productHistory = selectedHistory.filter(
+          (row) => row.product_id === p.id,
+        );
+        for (const row of productHistory) {
+          const historicalStart = new Date(`${dayKey(row.sold_at)}T00:00:00Z`);
+          if (historicalStart < start) start = historicalStart;
+        }
         trainingDays = Math.floor(
           (today.getTime() - start.getTime()) / 86400000,
         );
+        spans.push(trainingDays);
         if (trainingDays < 56) return [];
         const quantities = new Map<string, number>();
-        sales.forEach((s) => {
+        selectedSales.forEach((s) => {
           const units = s.items
             .filter((i) => i.product_id === p.id)
             .reduce((sum, i) => sum + i.quantity, 0);
@@ -90,6 +104,10 @@ export function forecast(
             dayKey(s.created_at),
             (quantities.get(dayKey(s.created_at)) ?? 0) + units,
           );
+        });
+        productHistory.forEach((row) => {
+          const date = dayKey(row.sold_at);
+          quantities.set(date, (quantities.get(date) ?? 0) + row.quantity);
         });
         const rows = Array.from({ length: trainingDays }, (_, day) => {
           const d = new Date(start.getTime() + day * 86400000);
@@ -132,9 +150,14 @@ export function forecast(
       ];
     });
   return {
-    source,
+    source:
+      !results.length && !builtIn
+        ? "insufficient"
+        : builtIn || uploadedSynthetic
+          ? "synthetic"
+          : "real",
     model_version: model.version,
-    training_days: synthetic ? 112 : days,
+    training_days: builtIn ? 112 : Math.max(0, ...spans),
     horizon_days: 7,
     validation_mae: errors.length
       ? errors.reduce((a, b) => a + b, 0) / errors.length

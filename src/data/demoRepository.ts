@@ -3,6 +3,8 @@ import type {
   CheckoutInput,
   ForecastResult,
   ImportRow,
+  HistoryRow,
+  HistoryImportResult,
   ProductInput,
   Repository,
   Sale,
@@ -13,6 +15,8 @@ import {
   validateImage,
   validateProduct,
 } from "../domain/rules";
+import { parseHistory } from "../lib/historyCsv";
+import { exportCSV } from "../lib/csv";
 export const DEMO_STORE = "00000000-0000-4000-8000-000000000001";
 export const DEMO_MANAGER: Account = {
   id: "00000000-0000-4000-8000-000000000002",
@@ -130,6 +134,7 @@ export function seedDemo(): DemoState {
     accounts: [DEMO_MANAGER, DEMO_CASHIER],
     movements: [],
     imports: [],
+    history: [],
     requests: {},
     forecasts: [],
   };
@@ -147,6 +152,7 @@ export class DemoRepository implements Repository {
   private read() {
     const saved = this.persistence.getItem(KEY);
     if (saved) this.state = JSON.parse(saved);
+    this.state.history ??= [];
     return this.state;
   }
   private guard(manager = false) {
@@ -181,6 +187,7 @@ export class DemoRepository implements Repository {
       s.accounts = s.accounts.filter((a) => a.id === this.account.id);
       s.movements = [];
       s.imports = [];
+      s.history = [];
     }
     s.products.forEach((p) => {
       if (p.image_path?.startsWith("data:")) p.image_url = p.image_path;
@@ -406,6 +413,73 @@ export class DemoRepository implements Repository {
       reader.onerror = () => reject(new Error("Image upload failed."));
       reader.readAsDataURL(file);
     });
+  }
+  async importHistory(
+    rows: HistoryRow[],
+    filename: string,
+  ): Promise<HistoryImportResult> {
+    return this.mutate((s) => {
+      const csv = exportCSV(
+        rows.map((row) => ({
+          Receipt: row.receipt,
+          Timestamp: row.sold_at,
+          SKU: row.sku,
+          Quantity: row.quantity,
+          "Unit Price": (row.unit_price_cents / 100).toFixed(2),
+          Source: row.source,
+        })),
+      );
+      const preview = parseHistory(csv, s.products, s.history);
+      if (preview.errors.length) throw new Error(preview.errors[0].message);
+      if (
+        rows.some((row) =>
+          s.sales.some(
+            (sale) =>
+              sale.id === row.receipt || sale.request_id === row.receipt,
+          ),
+        )
+      )
+        throw new Error("A receipt already exists as a live checkout.");
+      const added = rows.filter(
+        (row) =>
+          !s.history.some(
+            (old) => old.receipt === row.receipt && old.sku === row.sku,
+          ),
+      );
+      for (const row of added) {
+        const p = s.products.find((p) => p.sku === row.sku)!;
+        s.history.push({
+          ...row,
+          id: crypto.randomUUID(),
+          store_id: this.account.store_id,
+          product_id: p.id,
+          product_name: p.name,
+          line_total_cents: row.quantity * row.unit_price_cents,
+        });
+      }
+      if (added.length)
+        s.imports.push({
+          id: crypto.randomUUID(),
+          filename,
+          row_count: added.length,
+          result: `history - ${rows[0].source}`,
+          created_at: new Date().toISOString(),
+        });
+      return {
+        added: added.length,
+        skipped: rows.length - added.length,
+        receipts: new Set(added.map((row) => row.receipt)).size,
+      };
+    }, true);
+  }
+  async removeSyntheticHistory(): Promise<number> {
+    return this.mutate((s) => {
+      const removed = s.history.filter(
+        (row) => row.source === "synthetic",
+      ).length;
+      s.history = s.history.filter((row) => row.source !== "synthetic");
+      return removed;
+    }, true);
   }
   async removeImage(_path: string) {
     this.guard(true);

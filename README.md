@@ -38,6 +38,8 @@ Your existing `data/*.csv` files were preserved. They are no longer the active b
 
 ## Forecasting
 
+Managers can upload previous transaction items through **Import & export → Import transaction history**. History is validated and imported atomically, preserves current stock, and skips identical receipts. Forecasting offers actual sales plus uploaded real history, uploaded synthetic history for testing, and the built-in sample model. Apply migration `003_transaction_history.sql` before deploying. [CSV format and 90-day sari-sari sample](docs/TRANSACTION_HISTORY.md).
+
 ```powershell
 npm run ml:train
 ```

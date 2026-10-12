@@ -1,0 +1,13 @@
+{
+  "source": "synthetic",
+  "store": "Sari Sari Store",
+  "seed": 4242,
+  "days": 90,
+  "start_date": "2026-07-14",
+  "end_date": "2026-10-11",
+  "products": 40,
+  "receipts": 1137,
+  "item_rows": 3324,
+  "units": 16389,
+  "note": "Synthetic testing data for SSS-001 through SSS-040. Import as synthetic. Quantities and selling prices are invented; no stock deduction occurs."
+}

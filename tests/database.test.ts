@@ -6,7 +6,9 @@ import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Papa from "papaparse";
-import type { Account } from "../src/domain/types";
+import type { Account, Product, HistoryLine } from "../src/domain/types";
+import { parseHistory } from "../src/lib/historyCsv";
+import { forecast } from "../src/ml/forecast";
 let db: PGlite;
 const manager = "10000000-0000-4000-8000-000000000001",
   cashier = "10000000-0000-4000-8000-000000000002",
@@ -53,6 +55,9 @@ grant usage on schema storage to authenticated;grant select,insert,delete on sto
       "supabase/migrations/002_manager_self_registration.sql",
       "utf8",
     ),
+  );
+  await db.exec(
+    await readFile("supabase/migrations/003_transaction_history.sql", "utf8"),
   );
 }, 30000);
 beforeEach(async () => {
@@ -103,6 +108,337 @@ afterAll(async () => {
   await db?.close();
 });
 describe("Actual PostgreSQL schema, RPCs and RLS (mocked Supabase auth/storage schemas)", () => {
+  const historyRow = (receipt = "H001", source = "real") => ({
+    receipt,
+    sold_at: "2026-07-14T10:00:00+08:00",
+    sku: "P001",
+    quantity: 2,
+    unit_price_cents: 2500,
+    source,
+  });
+  async function importHistory(rows: unknown[]) {
+    return db.query<{
+      result: { added: number; skipped: number; receipts: number };
+    }>("select public.import_sales_history($1::jsonb,'history.csv') result", [
+      JSON.stringify(rows),
+    ]);
+  }
+  it("imports historical items once without changing checkout totals or stock", async () => {
+    await identity(manager);
+    expect((await importHistory([historyRow()])).rows[0].result).toEqual({
+      added: 1,
+      skipped: 0,
+      receipts: 1,
+    });
+    expect((await importHistory([historyRow()])).rows[0].result).toEqual({
+      added: 0,
+      skipped: 1,
+      receipts: 0,
+    });
+    expect(
+      (await db.query("select * from public.sales_history")).rows,
+    ).toHaveLength(1);
+    expect(
+      (await db.query<{ stock: number }>("select stock from public.products"))
+        .rows[0].stock,
+    ).toBe(10);
+    expect(
+      (await db.query("select * from public.transactions")).rows,
+    ).toHaveLength(0);
+    expect(
+      (await db.query("select * from public.stock_movements")).rows,
+    ).toHaveLength(1);
+    expect(
+      (await db.query("select * from public.import_runs")).rows,
+    ).toHaveLength(1);
+    await expect(
+      importHistory([historyRow("A-NEW"), { ...historyRow(), quantity: 3 }]),
+    ).rejects.toThrow("different data");
+    expect(
+      (await db.query("select * from public.sales_history")).rows,
+    ).toHaveLength(1);
+  });
+  it("validates history on the server and rolls back the entire batch", async () => {
+    await identity(manager);
+    for (const bad of [
+      { ...historyRow("H002"), sku: "UNKNOWN" },
+      { ...historyRow("H002"), quantity: 0 },
+      { ...historyRow("H002"), quantity: 1.5 },
+      { ...historyRow("H002"), unit_price_cents: -1 },
+      { ...historyRow("H002"), sold_at: "2099-01-01T00:00:00Z" },
+      { ...historyRow("H002"), source: "synthetic" },
+      { ...historyRow("H002"), source: "invalid" },
+    ])
+      await expect(importHistory([historyRow(), bad])).rejects.toThrow();
+    await expect(importHistory([historyRow(), historyRow()])).rejects.toThrow(
+      "Duplicate SKU",
+    );
+    expect(
+      (await db.query("select * from public.sales_history")).rows,
+    ).toHaveLength(0);
+    expect(
+      (await db.query("select * from public.import_runs")).rows,
+    ).toHaveLength(0);
+  });
+  it("protects history from Cashiers and other tenants", async () => {
+    await expect(importHistory([historyRow()])).rejects.toThrow(
+      "Access denied",
+    );
+    await identity(manager);
+    await importHistory([historyRow()]);
+    await identity(cashier);
+    expect(
+      (await db.query("select * from public.sales_history")).rows,
+    ).toHaveLength(0);
+    await expect(
+      db.query("select public.remove_synthetic_history()"),
+    ).rejects.toThrow("Access denied");
+    await identity(outsider);
+    await db.query("select public.claim_account('manager')");
+    expect(
+      (await db.query("select * from public.sales_history")).rows,
+    ).toHaveLength(0);
+    await expect(importHistory([historyRow()])).rejects.toThrow("Unknown SKU");
+    await expect(
+      db.query(
+        "insert into public.sales_history(store_id,receipt) values($1,'hack')",
+        [store],
+      ),
+    ).rejects.toThrow("permission denied");
+  });
+  it("clears synthetic training rows while preserving actual history, sales and stock", async () => {
+    await identity(manager);
+    await importHistory([historyRow("REAL", "real")]);
+    await importHistory([historyRow("SYN", "synthetic")]);
+    expect(
+      (
+        await db.query<{ removed: number }>(
+          "select public.remove_synthetic_history() removed",
+        )
+      ).rows[0].removed,
+    ).toBe(1);
+    expect(
+      (
+        await db.query<{ source: string }>(
+          "select source from public.sales_history",
+        )
+      ).rows,
+    ).toEqual([{ source: "real" }]);
+    expect(
+      (await db.query<{ stock: number }>("select stock from public.products"))
+        .rows[0].stock,
+    ).toBe(10);
+  });
+  it("rejects historical receipt IDs already recorded by live checkout", async () => {
+    const receipt = (await checkout()).rows[0].checkout;
+    await identity(manager);
+    await expect(importHistory([historyRow(receipt)])).rejects.toThrow(
+      "live checkout",
+    );
+  });
+  it("preserves complete receipt sets and ignores row ordering on identical reuploads", async () => {
+    await db.exec("reset role");
+    await db.query(
+      "insert into public.products(store_id,sku,name,price_cents) values($1,'P002','Second product',1000)",
+      [store],
+    );
+    await identity(manager);
+    const lines = [
+      historyRow(),
+      { ...historyRow(), sku: "P002", unit_price_cents: 1000 },
+    ];
+    expect((await importHistory(lines)).rows[0].result.added).toBe(2);
+    await expect(importHistory([lines[0]])).rejects.toThrow("different data");
+    expect((await importHistory([...lines].reverse())).rows[0].result).toEqual({
+      added: 0,
+      skipped: 2,
+      receipts: 0,
+    });
+    await expect(
+      importHistory([
+        { ...historyRow("NEW") },
+        {
+          ...historyRow("NEW"),
+          sku: "P002",
+          sold_at: "2026-07-15T10:00:00+08:00",
+        },
+      ]),
+    ).rejects.toThrow("timestamps must match");
+    expect(
+      (await db.query("select * from public.sales_history")).rows,
+    ).toHaveLength(2);
+  });
+  it("imports the full 90-day production sample through the actual PostgreSQL function", async () => {
+    await db.exec("reset role");
+    await db.query(
+      "update public.stores set name='Sari Sari Store' where id=$1",
+      [store],
+    );
+    await db.exec(
+      await readFile("supabase/seeds/sari_sari_products.sql", "utf8"),
+    );
+    await identity(manager);
+    const products = (
+      await db.query<Product>(
+        "select * from public.products where sku like 'SSS-%' order by sku",
+      )
+    ).rows;
+    const initialStock = products.map((p) => p.stock);
+    const sample = parseHistory(
+      await readFile("public/samples/sari-sari-synthetic-history.csv", "utf8"),
+      products,
+      [],
+      new Date("2026-10-12T08:00:00Z"),
+    );
+    expect(sample.errors).toEqual([]);
+    expect((await importHistory(sample.rows)).rows[0].result).toEqual({
+      added: 3324,
+      skipped: 0,
+      receipts: 1137,
+    });
+    const history = (
+      await db.query<HistoryLine>("select * from public.sales_history")
+    ).rows;
+    expect(history).toHaveLength(3324);
+    const result = forecast(
+      products,
+      [],
+      "uploaded-synthetic",
+      new Date("2026-10-12T08:00:00Z"),
+      history,
+    );
+    expect(result.results).toHaveLength(40);
+    expect(result.training_days).toBe(90);
+    expect(
+      (
+        await db.query<Product>(
+          "select * from public.products where sku like 'SSS-%' order by sku",
+        )
+      ).rows.map((p) => p.stock),
+    ).toEqual(initialStock);
+    expect(
+      (await db.query("select * from public.transactions")).rows,
+    ).toHaveLength(0);
+  });
+  it("imports the sari-sari catalog into an existing store and safely links uploaded photos on rerun", async () => {
+    const sql = await readFile("supabase/seeds/sari_sari_products.sql", "utf8");
+    await db.exec("reset role");
+    await db.query(
+      "update public.stores set name='Sari Sari Store' where id=$1",
+      [store],
+    );
+    await db.exec(sql);
+    expect(
+      (await db.query("select * from public.products where sku like 'SSS-%'"))
+        .rows,
+    ).toHaveLength(40);
+    expect(
+      (await db.query("select * from public.categories")).rows,
+    ).toHaveLength(9);
+    expect((await db.query("select * from public.stores")).rows).toHaveLength(
+      1,
+    );
+    expect((await db.query("select * from public.accounts")).rows).toHaveLength(
+      2,
+    );
+    expect(
+      (
+        await db.query(
+          "select * from public.stock_movements where reason like 'Opening stock - synthetic%'",
+        )
+      ).rows,
+    ).toHaveLength(40);
+    expect(
+      (
+        await db.query(
+          "select * from public.products where image_path is not null",
+        )
+      ).rows,
+    ).toHaveLength(0);
+    const rice = (
+      await db.query<{ id: string; price_cents: number }>(
+        "select id,price_cents from public.products where sku='SSS-001'",
+      )
+    ).rows[0];
+    product = rice.id;
+    await identity(cashier);
+    await checkout(1, rice.price_cents);
+    await db.exec("reset role");
+    await db.query(
+      "insert into storage.objects(bucket_id,name) values('product-images',$1)",
+      [`${store}/starter/rice.jpg`],
+    );
+    await db.query(
+      "update public.products set image_path=$1 where sku='SSS-002'",
+      [`${store}/my-existing-photo.jpg`],
+    );
+    await db.query(
+      "update public.products set price_cents=5600 where sku='SSS-001'",
+    );
+    await db.exec(sql);
+    const imported = (
+      await db.query<{
+        stock: number;
+        price_cents: number;
+        image_path: string;
+      }>(
+        "select stock,price_cents,image_path from public.products where sku='SSS-001'",
+      )
+    ).rows[0];
+    expect(imported).toEqual({
+      stock: 49,
+      price_cents: 5600,
+      image_path: `${store}/starter/rice.jpg`,
+    });
+    expect(
+      (
+        await db.query<{ image_path: string }>(
+          "select image_path from public.products where sku='SSS-002'",
+        )
+      ).rows[0].image_path,
+    ).toBe(`${store}/my-existing-photo.jpg`);
+    expect((await db.query("select * from public.products")).rows).toHaveLength(
+      41,
+    );
+    expect(
+      (await db.query("select * from public.import_runs")).rows,
+    ).toHaveLength(1);
+    expect(
+      (await db.query("select * from public.transactions")).rows,
+    ).toHaveLength(1);
+    expect(
+      (
+        await db.query(
+          "select * from public.stock_movements where reason like 'Opening stock - synthetic%'",
+        )
+      ).rows,
+    ).toHaveLength(40);
+  });
+  it("aborts the sari-sari import when the store name is missing or ambiguous", async () => {
+    const sql = await readFile("supabase/seeds/sari_sari_products.sql", "utf8");
+    await db.exec("reset role");
+    try {
+      await expect(db.exec(sql)).rejects.toThrow("found 0");
+    } finally {
+      await db.exec("rollback");
+    }
+    await db.query(
+      "update public.stores set name='Sari Sari Store' where id=$1",
+      [store],
+    );
+    await db.query("insert into public.stores(name) values('Sari Sari Store')");
+    try {
+      await expect(db.exec(sql)).rejects.toThrow("found 2");
+    } finally {
+      await db.exec("rollback");
+    }
+    expect((await db.query("select * from public.products")).rows).toHaveLength(
+      1,
+    );
+    expect(
+      (await db.query("select * from public.import_runs")).rows,
+    ).toHaveLength(0);
+  });
   it("creates a first-time Manager's own store and can authorize a Cashier", async () => {
     await db.exec("reset role");
     await db.query(

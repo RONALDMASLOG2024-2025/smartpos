@@ -11,6 +11,7 @@ import {
   type Preview,
 } from "../lib/csv";
 import { dateTime } from "../domain/rules";
+import { HistoryImport } from "../components/HistoryImport";
 export function DataPage() {
   const { repo, data, busy, act } = useWorkspace();
   const [text, setText] = useState("");
@@ -320,6 +321,7 @@ export function DataPage() {
           </button>
         </section>
       )}
+      <HistoryImport />
       <section className="panel">
         <div className="panel-head">
           <h2>Import history</h2>
